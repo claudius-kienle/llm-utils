@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-from llm_utils.communication_utils.models.cad_machining_feature import MachiningFeature
 from llm_utils.communication_utils.models.directions import Direction
 from llm_utils.communication_utils.models.unique_color_supplier import Color, UniqueColorSupplier
 from llm_utils.communication_utils.models.view_orientation import ViewOrientation
@@ -154,7 +153,6 @@ class CADFace:
 
 @dataclass
 class CADPart:
-    machining_feature: MachiningFeature
     cad_faces: List[CADFace]
     bounding_box: BoundingBox
     color: Color
@@ -178,12 +176,11 @@ class CADPart:
 
     @property
     def display_name(self) -> str:
-        return "%s (%s)" % (self.machining_feature.value, self.color_name)
+        return self.color_name
 
     @staticmethod
     def from_dict(data: Dict) -> "CADPart":
         return CADPart(
-            machining_feature=MachiningFeature(data["machining_feature"]),
             bounding_box=BoundingBox.from_dict(data["bounding_box"]),
             cad_faces=[CADFace.from_dict(entry) for entry in data["cad_faces"]],
             color=data["color"],
@@ -195,7 +192,6 @@ class CADPart:
         if color is None:
             color = UniqueColorSupplier.get_instance().get_color()
         return CADPart(
-            machining_feature=part.machining_feature,
             bounding_box=part.bounding_box,
             cad_faces=part.cad_faces,
             color=color,
@@ -207,7 +203,6 @@ class CADPart:
             cad_faces = self.cad_faces
 
         return CADPart(
-            machining_feature=self.machining_feature,
             bounding_box=self.bounding_box,
             cad_faces=cad_faces,
             color=self.color,
@@ -222,7 +217,6 @@ class CADPart:
 
     def unify(self, other: "CADPart") -> "CADPart":
         return CADPart(
-            machining_feature=self.machining_feature,
             bounding_box=self.bounding_box.unify(other.bounding_box),
             cad_faces=list(set(self.cad_faces + other.cad_faces)),
             color=self.color,

@@ -8,7 +8,7 @@ A comprehensive Python package providing utilities for working with Large Langua
 ## Features
 
 - 🚀 **Universal LLM Interface**: Connect to multiple LLM providers with a single, consistent API
-- 🔧 **Communication Utilities**: Tools for CAD/machining applications and data visualization
+- 🔧 **Communication Utilities**: Tools for CAD applications and data visualization
 - 🎨 **Color Management**: Unique color generation and web color utilities
 - 📝 **Prompt Management**: XML-based prompt templates with variable substitution
 - 🖼️ **Multi-modal Support**: Handle text and image content in conversations
@@ -135,7 +135,7 @@ response = api.do_call(chat)
 ### Communication Utilities
 
 ```python
-from llm_utils import UniqueColorSupplier, CADPart, MachiningFeature
+from llm_utils import UniqueColorSupplier, CADPart
 
 # Generate unique colors for visualization
 color_supplier = UniqueColorSupplier()
@@ -143,7 +143,6 @@ colors = [color_supplier.get_next_color() for _ in range(5)]
 
 # Work with CAD components (requires additional setup)
 cad_part = CADPart(name="housing", material="aluminum")
-feature = MachiningFeature(type="hole", diameter=10.0)
 ```
 
 ## API Reference
@@ -165,7 +164,7 @@ feature = MachiningFeature(type="hole", diameter=10.0)
 ### Utilities
 
 - **`UniqueColorSupplier`**: Generate distinct colors
-- **`CADPart`**, **`MachiningFeature`**: CAD/manufacturing utilities
+- **`CADPart`**: CAD/manufacturing utilities
 - **`ViewOrientation`**, **`Direction`**: 3D visualization helpers
 
 ## Examples
