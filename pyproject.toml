@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 120
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
+[project]
+name = "llm-utils"
+readme = "README.md"
+description = "A collection of utilities for working with LLMs, including data conversion, color utilities, and more."
+authors = [{ name = "Claudius Kienle", email = "claudius.kienle@tu-darmstadt.de" }]
+license = "MIT"
+version = "0.0.5"
+dependencies = [
+    "dicttoxml",
+    "xmltodict",
+    "webcolors",
+    "certifi",
+    "tiktoken",
+    "dacite",
+    "distinctipy",
+    "pillow"
+]
