@@ -1,8 +1,9 @@
+import json
 import logging
 import os
 import time
 from datetime import datetime
-from typing import Optional
+from typing import Generator, Optional, Union
 
 import requests
 import tiktoken
@@ -23,6 +24,10 @@ class TextGenApi:
     """
     Interface for convenient access to our textgen backend.
     Note that the robustness of the methods supplied by this class highly depend on the model running in the backend.
+
+    Supports both streaming and non-streaming responses:
+    - Non-streaming: Returns a complete Message object
+    - Streaming: Returns a Generator that yields text chunks as they arrive
 
     Robustness can be improved by:
             1. reworking/adding to the prompt
@@ -49,8 +54,9 @@ class TextGenApi:
         chat: Chat,
         connection_id: Optional[str] = None,
         temperature: Optional[float] = None,
+        stream: bool = False,
         call_id: Optional[str] = None,
-    ) -> Message:
+    ) -> Union[Message, Generator[str, None, None]]:
         connection = self.connections.get_connection(connection_id)
         logger.debug("call llm with %s", connection)
         system_message = next(filter(lambda m: m.role == "system", chat.messages), None)
@@ -60,7 +66,7 @@ class TextGenApi:
             "model": connection.model,
             "messages": chat.to_dict(cache=True),
             "temperature": self.temperature,
-            "stream": False,
+            "stream": stream,
             "max_tokens": connection.max_tokens,
             **connection.additional_params,
         }
@@ -82,34 +88,18 @@ class TextGenApi:
                 time.sleep(seconds_to_sleep)
 
         response = requests.post(
-            connection.uri, headers={**self.headers, **connection.additional_headers}, json=data, verify=False
+            connection.uri,
+            headers={**self.headers, **connection.additional_headers},
+            json=data,
+            verify=False,
+            stream=stream,
         )
 
         if response.status_code == 200:
-            self.usage.add_call(response_usage=response.json()["usage"], call_id=call_id)
-
-            if (
-                connection.ratelimit_remaining_tokens_key is not None
-                and connection.ratelimit_remaining_tokens_key in response.headers
-            ):
-                self.remaining_tokens = int(response.headers[connection.ratelimit_remaining_tokens_key])
-                if "claude" in connection.identifier:
-                    self.resets_tokens_at = datetime.strptime(
-                        response.headers[connection.ratelimit_reset_key], "%Y-%m-%dT%H:%M:%SZ"
-                    )
-                else:
-                    self.resets_tokens_at = datetime.now() + parse_timedelta(
-                        response.headers[connection.ratelimit_reset_key]
-                    )
-            logger.debug(response.json()["usage"])
-            if "claude" in connection.identifier:
-                message = MessageFactory().from_dict(response.json())
+            if stream:
+                return self._handle_streaming_response(response, connection, call_id)
             else:
-                choices = response.json()["choices"]
-                assert len(choices) > 0
-                message = MessageFactory().from_dict(choices[0]["message"])
-
-            return message
+                return self._handle_non_streaming_response(response, connection, call_id)
 
         elif response.status_code == 429 or response.status_code == 529:
             logger.warning(
@@ -117,11 +107,128 @@ class TextGenApi:
                 % str(response.json())
             )
             time.sleep(60)
-            return self.do_call(chat=chat, connection_id=connection_id, temperature=temperature, call_id=call_id)
+            return self.do_call(chat=chat, connection_id=connection_id, temperature=temperature, stream=stream, call_id=call_id)
         else:
             logger.warning(response.text)
             logger.error(response.status_code)
-            return self.do_call(chat=chat, connection_id=connection_id, temperature=temperature, call_id=call_id)
+            return self.do_call(chat=chat, connection_id=connection_id, temperature=temperature, stream=stream, call_id=call_id)
+
+    def _handle_non_streaming_response(self, response, connection, call_id: Optional[str] = None) -> Message:
+        """Handle non-streaming response from the API."""
+        response_data = response.json()
+        self.usage.add_call(response_usage=response_data["usage"], call_id=call_id)
+
+        self._update_rate_limits(response, connection)
+        
+        logger.debug(response_data["usage"])
+        if "claude" in connection.identifier:
+            message = MessageFactory().from_dict(response_data)
+        else:
+            choices = response_data["choices"]
+            assert len(choices) > 0
+            message = MessageFactory().from_dict(choices[0]["message"])
+
+        return message
+
+    def _handle_streaming_response(self, response, connection, call_id: Optional[str] = None) -> Generator[str, None, None]:
+        """Handle streaming response from the API."""
+        self._update_rate_limits(response, connection)
+        
+        accumulated_content = ""
+        usage_data = None
+        
+        try:
+            for line in response.iter_lines():
+                if line:
+                    line_str = line.decode('utf-8')
+                    if line_str.startswith('data: '):
+                        data_str = line_str[6:]  # Remove 'data: ' prefix
+                        
+                        if data_str.strip() == '[DONE]':
+                            break
+                            
+                        try:
+                            data = json.loads(data_str)
+                            
+                            # Handle different streaming formats
+                            if "claude" in connection.identifier:
+                                # Claude streaming format
+                                if data.get("type") == "content_block_delta":
+                                    delta = data.get("delta", {})
+                                    text = delta.get("text", "")
+                                    if text:
+                                        accumulated_content += text
+                                        yield text
+                                elif data.get("type") == "message_delta":
+                                    usage_data = data.get("usage")
+                            else:
+                                # OpenAI-compatible streaming format
+                                choices = data.get("choices", [])
+                                if choices:
+                                    delta = choices[0].get("delta", {})
+                                    content = delta.get("content", "")
+                                    if content:
+                                        accumulated_content += content
+                                        yield content
+                                
+                                # Check for usage information
+                                if "usage" in data:
+                                    usage_data = data["usage"]
+                                    
+                        except json.JSONDecodeError:
+                            logger.warning(f"Failed to parse streaming data: {data_str}")
+                            continue
+                            
+        except Exception as e:
+            logger.error(f"Error during streaming: {e}")
+            raise
+        
+        # Add usage information if available
+        if usage_data and call_id:
+            self.usage.add_call(response_usage=usage_data, call_id=call_id)
+
+    def _update_rate_limits(self, response, connection):
+        """Update rate limit information from response headers."""
+        if (
+            connection.ratelimit_remaining_tokens_key is not None
+            and connection.ratelimit_remaining_tokens_key in response.headers
+        ):
+            self.remaining_tokens = int(response.headers[connection.ratelimit_remaining_tokens_key])
+            if "claude" in connection.identifier:
+                self.resets_tokens_at = datetime.strptime(
+                    response.headers[connection.ratelimit_reset_key], "%Y-%m-%dT%H:%M:%SZ"
+                )
+            else:
+                self.resets_tokens_at = datetime.now() + parse_timedelta(
+                    response.headers[connection.ratelimit_reset_key]
+                )
+
+    def stream_call(
+        self,
+        chat: Chat,
+        connection_id: Optional[str] = None,
+        temperature: Optional[float] = None,
+        call_id: Optional[str] = None,
+    ) -> Generator[str, None, None]:
+        """
+        Convenience method for streaming calls.
+        Returns a generator that yields text chunks as they arrive from the LLM.
+        
+        Args:
+            chat: The conversation to send to the LLM
+            connection_id: Optional connection identifier
+            temperature: Optional temperature override
+            call_id: Optional call identifier for usage tracking
+            
+        Returns:
+            Generator yielding text chunks as strings
+        """
+        result = self.do_call(chat=chat, connection_id=connection_id, temperature=temperature, stream=True, call_id=call_id)
+        if isinstance(result, Generator):
+            yield from result
+        else:
+            # Fallback if streaming is not supported - yield the complete message
+            yield result.content[0].text if hasattr(result, 'content') and result.content else str(result)
 
     def _num_tokens_consumed_from_request(
         self,
