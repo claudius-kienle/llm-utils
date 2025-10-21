@@ -46,7 +46,7 @@ def get_unique_colors(n_colors: int) -> List[List[float]]:
     if not colors_file.is_file():
         colors = distinctipy.get_colors(100, exclude_colors=[[0, 0, 0], [1, 1, 1]], rng=0)
         with colors_file.open("w") as f:
-            colors = json.dump(colors, f)
+            json.dump(colors, f)
     else:
         with colors_file.open("r") as f:
             colors = json.load(f)

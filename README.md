@@ -1,6 +1,6 @@
 # LLM Utils
 
-[![Version](https://img.shields.io/badge/version-0.0.5-blue.svg)](https://git.ias.informatik.tu-darmstadt.de/kienle1/llm-interface)
+[![Version](https://img.shields.io/badge/version-0.0.5-blue.svg)](https://git.github.com/claudius-kienle/llm-utils)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A comprehensive Python package providing utilities for working with Large Language Models (LLMs). This package offers a universal interface to connect your applications to various LLM providers including OpenAI ChatGPT, Anthropic Claude, Google Gemini, and self-hosted models.
@@ -18,13 +18,13 @@ A comprehensive Python package providing utilities for working with Large Langua
 
 ### From Git Repository
 ```bash
-pip install git+ssh://git@git.ias.informatik.tu-darmstadt.de:kienle1/llm-interface.git
+pip install git+ssh://git@github.com:claudius-kienle/llm-utils.git
 ```
 
 ### For Development
 ```bash
-git clone git@git.ias.informatik.tu-darmstadt.de:kienle1/llm-interface.git
-cd llm-interface
+git clone git@github.com:claudius-kienle/llm-utils.git
+cd llm-utils
 pip install -e .
 ```
 
@@ -177,12 +177,6 @@ Check out the `test.py` file for more usage examples, or explore the test suite 
 
 ```bash
 python -m build
-```
-
-### Publishing to Registry
-
-```bash
-python -m twine upload --repository-url https://git.ias.informatik.tu-darmstadt.de/api/v4/projects/2282/packages/pypi dist/*
 ```
 
 ## License
