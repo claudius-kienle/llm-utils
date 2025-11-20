@@ -20,6 +20,16 @@ class UsageCall:
             "call_id": self.call_id,
         }
 
+    @staticmethod
+    def from_loads(data: dict) -> "UsageCall":
+        return UsageCall(
+            input_tokens=data["input_tokens"],
+            input_tokens_cached=data["input_tokens_cached"],
+            output_tokens=data["output_tokens"],
+            output_tokens_cached=data["output_tokens_cached"],
+            call_id=data.get("call_id"),
+        )
+
 
 @dataclass
 class Usage:
@@ -62,3 +72,15 @@ class Usage:
 
     def to_dumps(self) -> str:
         return json.dumps(self.to_json())
+
+    @staticmethod
+    def from_loads(s: str) -> "Usage":
+        data = json.loads(s)
+        return Usage.from_json(data)
+
+    @staticmethod
+    def from_json(data: dict) -> "Usage":
+        usage = Usage()
+        for call_data in data["calls"]:
+            usage.calls.append(UsageCall.from_loads(call_data))
+        return usage

@@ -35,13 +35,24 @@ class TextGenApi:
             3. run a larger/better model in the backend
     """
 
-    def __init__(self, connections: TextGenLLMConnections, temperature: float = 1.0, seed: Optional[int] = None):
+    def __init__(
+        self,
+        connections: TextGenLLMConnections,
+        temperature: float = 1.0,
+        seed: Optional[int] = None,
+        usage_out_file: Optional[str] = None,
+    ):
         self.connections = connections
         self.headers = {"Content-Type": "application/json"}
         self.remaining_tokens = None
         self.temperature = temperature
         self.seed = seed
-        self.usage = Usage()
+        self._usage_out_file = usage_out_file
+        if usage_out_file is not None and os.path.exists(usage_out_file):
+            with open(usage_out_file, "r") as f:
+                self.usage = Usage.from_loads(f.read())
+        else:
+            self.usage = Usage()
 
     @staticmethod
     def default(connection: Optional[str] = None) -> "TextGenApi":
@@ -107,19 +118,23 @@ class TextGenApi:
                 % str(response.json())
             )
             time.sleep(60)
-            return self.do_call(chat=chat, connection_id=connection_id, temperature=temperature, stream=stream, call_id=call_id)
+            return self.do_call(
+                chat=chat, connection_id=connection_id, temperature=temperature, stream=stream, call_id=call_id
+            )
         else:
             logger.warning(response.text)
             logger.error(response.status_code)
-            return self.do_call(chat=chat, connection_id=connection_id, temperature=temperature, stream=stream, call_id=call_id)
+            return self.do_call(
+                chat=chat, connection_id=connection_id, temperature=temperature, stream=stream, call_id=call_id
+            )
 
     def _handle_non_streaming_response(self, response, connection, call_id: Optional[str] = None) -> Message:
         """Handle non-streaming response from the API."""
         response_data = response.json()
-        self.usage.add_call(response_usage=response_data["usage"], call_id=call_id)
+        self._save_call_usage(call_id, response_data["usage"])
 
         self._update_rate_limits(response, connection)
-        
+
         logger.debug(response_data["usage"])
         if "claude" in connection.identifier:
             message = MessageFactory().from_dict(response_data)
@@ -130,26 +145,36 @@ class TextGenApi:
 
         return message
 
-    def _handle_streaming_response(self, response, connection, call_id: Optional[str] = None) -> Generator[str, None, None]:
+    def _save_call_usage(self, call_id: Optional[str], response_usage: dict):
+        """Save usage information to file if specified."""
+        self.usage.add_call(response_usage=response_usage, call_id=call_id)
+
+        if self._usage_out_file is not None:
+            with open(self._usage_out_file, "w") as f:
+                f.write(self.usage.to_dumps())
+
+    def _handle_streaming_response(
+        self, response, connection, call_id: Optional[str] = None
+    ) -> Generator[str, None, None]:
         """Handle streaming response from the API."""
         self._update_rate_limits(response, connection)
-        
+
         accumulated_content = ""
         usage_data = None
-        
+
         try:
             for line in response.iter_lines():
                 if line:
-                    line_str = line.decode('utf-8')
-                    if line_str.startswith('data: '):
+                    line_str = line.decode("utf-8")
+                    if line_str.startswith("data: "):
                         data_str = line_str[6:]  # Remove 'data: ' prefix
-                        
-                        if data_str.strip() == '[DONE]':
+
+                        if data_str.strip() == "[DONE]":
                             break
-                            
+
                         try:
                             data = json.loads(data_str)
-                            
+
                             # Handle different streaming formats
                             if "claude" in connection.identifier:
                                 # Claude streaming format
@@ -170,22 +195,22 @@ class TextGenApi:
                                     if content:
                                         accumulated_content += content
                                         yield content
-                                
+
                                 # Check for usage information
                                 if "usage" in data:
                                     usage_data = data["usage"]
-                                    
+
                         except json.JSONDecodeError:
                             logger.warning(f"Failed to parse streaming data: {data_str}")
                             continue
-                            
+
         except Exception as e:
             logger.error(f"Error during streaming: {e}")
             raise
-        
+
         # Add usage information if available
         if usage_data and call_id:
-            self.usage.add_call(response_usage=usage_data, call_id=call_id)
+            self._save_call_usage(call_id, usage_data)
 
     def _update_rate_limits(self, response, connection):
         """Update rate limit information from response headers."""
@@ -213,22 +238,24 @@ class TextGenApi:
         """
         Convenience method for streaming calls.
         Returns a generator that yields text chunks as they arrive from the LLM.
-        
+
         Args:
             chat: The conversation to send to the LLM
             connection_id: Optional connection identifier
             temperature: Optional temperature override
             call_id: Optional call identifier for usage tracking
-            
+
         Returns:
             Generator yielding text chunks as strings
         """
-        result = self.do_call(chat=chat, connection_id=connection_id, temperature=temperature, stream=True, call_id=call_id)
+        result = self.do_call(
+            chat=chat, connection_id=connection_id, temperature=temperature, stream=True, call_id=call_id
+        )
         if isinstance(result, Generator):
             yield from result
         else:
             # Fallback if streaming is not supported - yield the complete message
-            yield result.content[0].text if hasattr(result, 'content') and result.content else str(result)
+            yield result.content[0].text if hasattr(result, "content") and result.content else str(result)
 
     def _num_tokens_consumed_from_request(
         self,
