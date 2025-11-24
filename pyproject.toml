@@ -17,8 +17,7 @@ authors = [{ name = "Claudius Kienle", email = "claudius.kienle@tu-darmstadt.de"
 license = "MIT"
 version = "0.0.5"
 dependencies = [
-    "dicttoxml",
-    "xmltodict",
+    "python-utils",
     "webcolors",
     "certifi",
     "tiktoken",

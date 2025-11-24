@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Union
+from python_utils.communication_utils.utils.parsing_utils import obj_to_xml
 
-from llm_utils.communication_utils.utils.parsing_utils import obj_to_xml
 from llm_utils.openai_api.message import Message
 from llm_utils.openai_api.message_role import MessageRole
 from llm_utils.openai_api.text_message_content import TextMessageContent
