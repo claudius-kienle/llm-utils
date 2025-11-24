@@ -1,4 +1,3 @@
-from .communication_utils import CADPart, Direction, UniqueColorSupplier, ViewOrientation
 from .openai_api import (
     AssistantMessage,
     Chat,
@@ -18,10 +17,6 @@ from .prompt_generation import Prompt
 from .textgen_api import TextGenApi, TextGenLLMConnection, TextGenLLMConnections
 
 __all__ = (
-    "CADPart",
-    "Direction",
-    "UniqueColorSupplier",
-    "ViewOrientation",
     "AssistantMessage",
     "ChatFactory",
     "Chat",

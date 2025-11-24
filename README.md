@@ -132,45 +132,6 @@ chat = Chat(messages=[message])
 response = api.do_call(chat)
 ```
 
-### Communication Utilities
-
-```python
-from llm_utils import UniqueColorSupplier, CADPart
-
-# Generate unique colors for visualization
-color_supplier = UniqueColorSupplier()
-colors = [color_supplier.get_next_color() for _ in range(5)]
-
-# Work with CAD components (requires additional setup)
-cad_part = CADPart(name="housing", material="aluminum")
-```
-
-## API Reference
-
-### Core Classes
-
-- **`TextGenApi`**: Main interface for LLM communication
-- **`Chat`**: Represents a conversation with messages
-- **`Message`**: Base class for conversation messages
-- **`UserMessage`**, **`AssistantMessage`**, **`SystemMessage`**: Specific message types
-- **`Prompt`**: XML-based prompt template management
-
-### Content Types
-
-- **`TextMessageContent`**: Plain text content
-- **`ImageMessageContent`**: Image content for multi-modal models
-- **`MessageContentFactory`**: Factory for creating content objects
-
-### Utilities
-
-- **`UniqueColorSupplier`**: Generate distinct colors
-- **`CADPart`**: CAD/manufacturing utilities
-- **`ViewOrientation`**, **`Direction`**: 3D visualization helpers
-
-## Examples
-
-Check out the `test.py` file for more usage examples, or explore the test suite for comprehensive API usage patterns.
-
 ## Development
 
 ### Building the Package
