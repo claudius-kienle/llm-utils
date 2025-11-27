@@ -23,16 +23,22 @@ class MessageFactory:
             # a message with only one content might be flattened. Undo that flattening
             content_dict = [content_dict]
 
-        content = [MessageContentFactory().from_dict(c) for c in content_dict]
+        content = tuple(MessageContentFactory().from_dict(c) for c in content_dict)
 
         return Message(role=MessageRole(dict_data["role"]), content=content)
 
     def from_xml(self, xml: ET.Element, images: ImageMap) -> Message:
-        role = xml.get("role")
-        children = list(xml.iter("content"))
+        if xml.tag == "message":
+            role = xml.get("role")
+            children = list(xml.iter("content"))
+        else:
+            role = xml.tag
+            children = list(xml)
         if len(children) == 0:
             # text directly in message
-            content = [TextMessageContent.from_string(text=xml.text)]
+            text = xml.text
+            assert text is not None
+            content = (TextMessageContent.from_string(text=text),)
         else:
-            content = [MessageContentFactory().from_xml(xml=content, images=images) for content in children]
+            content = tuple(MessageContentFactory().from_xml(xml=content, images=images) for content in children)
         return Message(role=MessageRole(role), content=content)

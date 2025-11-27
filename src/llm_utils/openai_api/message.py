@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Dict, List
 
 from python_utils.data_utils import fromdict
 
@@ -11,9 +10,9 @@ from llm_utils.openai_api.message_role import MessageRole
 @dataclass
 class Message:
     role: MessageRole
-    content: List[MessageContent]
+    content: tuple[MessageContent, ...]
 
-    def to_dict(self, cache: bool = False) -> Dict:
+    def to_dict(self, cache: bool = False) -> dict:
         if len(self.content) == 1:
             content_dict = self.content[0].to_dict()
             assert content_dict["type"] == "text"
@@ -33,15 +32,15 @@ class Message:
         return "- %s\n    %s" % (self.role.value, content_repr)
 
     def replace(self, needle: str, text: str) -> "Message":
-        return Message(role=self.role, content=[c.replace(needle, text) for c in self.content])
+        return Message(role=self.role, content=tuple(c.replace(needle, text) for c in self.content))
 
     @staticmethod
-    def from_json(data: Dict) -> "MessageContent":
+    def from_json(data: dict) -> "Message":
         if isinstance(data["content"], str):
             data["content"] = [{"text": data["content"]}]
         return Message(
             role=fromdict(data["role"], MessageRole),
-            content=[fromdict(item, MessageContentFactory()(item)) for item in data["content"]],
+            content=tuple(fromdict(item, MessageContentFactory()(item)) for item in data["content"]),
         )
 
     @property

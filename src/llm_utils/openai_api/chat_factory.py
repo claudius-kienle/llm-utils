@@ -15,8 +15,8 @@ class ChatFactory:
     def from_xml(self, xml: ET.Element, images: Optional[ImageMap] = None) -> Chat:
         if images is None:
             images = {}
-        children = list(xml.iter("message"))
-        messages = [MessageFactory().from_xml(xml=message, images=images) for message in children]
+
+        messages = [MessageFactory().from_xml(xml=message, images=images) for message in xml]
         return Chat(messages=messages)
 
     def to_json(self, chat: Chat) -> Dict:

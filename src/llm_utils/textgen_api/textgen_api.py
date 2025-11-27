@@ -3,7 +3,7 @@ import logging
 import os
 import time
 from datetime import datetime
-from typing import Generator, Optional, Union
+from typing import Generator, Optional, Union, overload
 
 import requests
 import tiktoken
@@ -60,6 +60,24 @@ class TextGenApi:
             connection = os.getenv("LLM_MODEL")
         return TextGenApi(connections=TextGenLLMConnections.default(connection=connection))
 
+    @overload
+    def do_call(
+        self,
+        chat: Chat,
+        connection_id: Optional[str] = None,
+        temperature: Optional[float] = None,
+        stream: bool = False,
+        call_id: Optional[str] = None,
+    ) -> Message: ...
+    @overload
+    def do_call(
+        self,
+        chat: Chat,
+        connection_id: Optional[str] = None,
+        temperature: Optional[float] = None,
+        stream: bool = True,
+        call_id: Optional[str] = None,
+    ) -> Generator[str, None, None]: ...
     def do_call(
         self,
         chat: Chat,
