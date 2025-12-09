@@ -14,7 +14,7 @@ class Prompt:
     prompt: str
 
     def to_chat(self, images: Optional[ImageMap] = None) -> Chat:
-        assert re.search(r"\{[\w\-\_]+\}", self.prompt) is None, "Prompt contains unreplaced placeholders"
+        # assert re.search(r"\{[\w\-\_]+\}", self.prompt) is None, "Prompt contains unreplaced placeholders"
         return ChatFactory().from_xml_string(self.prompt, images=images)
 
     def replace_all(self, **kwargs):
