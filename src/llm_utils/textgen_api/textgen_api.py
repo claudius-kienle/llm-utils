@@ -96,9 +96,10 @@ class TextGenApi:
             "messages": chat.to_dict(cache=True),
             "temperature": self.temperature,
             "stream": stream,
-            "max_tokens": connection.max_tokens,
             **connection.additional_params,
         }
+        if connection.max_tokens is not None:
+            data["max_tokens"] = connection.max_tokens
         if temperature is not None:
             data["temperature"] = temperature
         if connection.has_seed and self.seed is not None:
