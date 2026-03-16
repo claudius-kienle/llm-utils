@@ -96,9 +96,10 @@ class TextGenApi:
             "messages": chat.to_dict(cache=True),
             "temperature": self.temperature,
             "stream": stream,
-            "max_tokens": connection.max_tokens,
             **connection.additional_params,
         }
+        if connection.max_tokens is not None:
+            data["max_tokens"] = connection.max_tokens
         if temperature is not None:
             data["temperature"] = temperature
         if connection.has_seed and self.seed is not None:
@@ -140,10 +141,10 @@ class TextGenApi:
                 chat=chat, connection_id=connection_id, temperature=temperature, stream=stream, call_id=call_id
             )
         else:
-            logger.warning(response.text)
             logger.error(response.status_code)
-            return self.do_call(
-                chat=chat, connection_id=connection_id, temperature=temperature, stream=stream, call_id=call_id
+            logger.warning(response.text)
+            raise RuntimeError(
+                f"LLM API request failed with status {response.status_code}: {response.text}"
             )
 
     def _handle_non_streaming_response(self, response, connection, call_id: Optional[str] = None) -> Message:

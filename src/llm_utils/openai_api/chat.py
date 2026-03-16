@@ -89,15 +89,15 @@ class Chat:
         else:
             other_sys_msg = other_chat
         new_messages = []
-        # found_system_message = False
+        found_system_message = False
         for message in self.messages:
             if message.role == MessageRole.SYSTEM:
                 new_messages.append(Message(role=MessageRole.SYSTEM, content=[TextMessageContent(text=other_sys_msg)]))
-                # found_system_message = True
+                found_system_message = True
             else:
                 new_messages.append(message)
-        # if not found_system_message:
-        #     raise ValueError("No system message found to replace")
+        if not found_system_message:
+            raise ValueError("No system message found to replace")
 
         return self.copy_with(messages=new_messages)
 
