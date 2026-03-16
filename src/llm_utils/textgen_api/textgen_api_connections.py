@@ -30,6 +30,8 @@ class TextGenLLMConnections:
             "gpt4.1": lambda: TextGenLLMConnection.openai("gpt-4.1-2025-04-14"),
             "gpt4o-mini": lambda: TextGenLLMConnection.openai("gpt-4o-mini-2024-07-18"),
             "gpt4o": lambda: TextGenLLMConnection.openai("gpt-4o-2024-08-06"),
+            "gpt5-mini": lambda: TextGenLLMConnection.openai("gpt-5-mini-2025-08-07"),
+            "gpt5.4": lambda: TextGenLLMConnection.openai("gpt-5.4"),
             "claude3.5-haiku": lambda: TextGenLLMConnection.anthropic("claude-3-5-haiku-20241022"),
             "claude3.7-sonnet": lambda: TextGenLLMConnection.anthropic("claude-3-7-sonnet-20250219"),
             "claude4-sonnet": lambda: TextGenLLMConnection.anthropic("claude-4-sonnet-20250514"),
