@@ -15,10 +15,7 @@ class ImageMessageContent(MessageContent):
 
     def to_dict(self) -> Dict:
         with NamedTemporaryFile(mode="wb", suffix=".jpeg", delete=False) as tf:
-            image_to_save = self.image
-            if image_to_save.mode == "RGBA":
-                image_to_save = image_to_save.convert("RGB")
-            image_to_save.save(tf)
+            self.image.save(tf)
         with open(tf.name, "rb") as image_file:
             image_data = "data:image/jpeg;base64,%s" % base64.b64encode(image_file.read()).decode("utf-8")
         tf.close()
